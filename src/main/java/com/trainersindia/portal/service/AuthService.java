@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.trainersindia.portal.security.JwtTokenProvider;
 import com.trainersindia.portal.security.UserPrincipal;
+import com.trainersindia.portal.exception.UserException;
+import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -27,6 +30,7 @@ import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -38,38 +42,44 @@ public class AuthService {
 
     public String initiateRegistration(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username is already taken");
+            throw new UserException("Username is already taken", HttpStatus.CONFLICT);
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already registered");
+            throw new UserException("Email is already registered", HttpStatus.CONFLICT);
         }
 
-        // Create unverified user
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setFullName(request.getFullName());
-        user.setRoles(Collections.singleton(request.getRole().name()));
-        user.setActive(false); // User is inactive until email is verified
+        try {
+            // Create unverified user
+            User user = new User();
+            user.setUsername(request.getUsername());
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setFullName(request.getFullName());
+            user.setRoles(Collections.singleton(request.getRole().name()));
+            user.setActive(false); // User is inactive until email is verified
 
-        // Generate verification code
-        String verificationCode = generateVerificationCode();
-        
-        // Create verification token
-        EmailVerificationToken token = new EmailVerificationToken();
-        token.setEmail(request.getEmail());
-        token.setCode(verificationCode);
-        token.setExpiryDate(LocalDateTime.now().plusMinutes(15)); // 15 minutes validity
-        token.setUser(user);
-        
-        tokenRepository.save(token);
+            // Generate verification code
+            String verificationCode = generateVerificationCode();
+            
+            // Create verification token
+            EmailVerificationToken token = new EmailVerificationToken();
+            token.setEmail(request.getEmail());
+            token.setCode(verificationCode);
+            token.setExpiryDate(LocalDateTime.now().plusMinutes(15)); // 15 minutes validity
+            token.setUser(user);
+            
+            tokenRepository.save(token);
 
-        // Send verification email
-        emailService.sendVerificationEmail(request.getEmail(), verificationCode);
+            // Send verification email
+            emailService.sendVerificationEmail(request.getEmail(), verificationCode);
 
-        return "Verification code sent to " + request.getEmail();
+            log.info("Registration initiated for user: {}", request.getEmail());
+            return "Verification code sent to " + request.getEmail();
+        } catch (Exception e) {
+            log.error("Failed to initiate registration for {}: {}", request.getEmail(), e.getMessage());
+            throw new UserException("Failed to initiate registration", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Transactional
@@ -146,21 +156,29 @@ public class AuthService {
 
     @Transactional
     public String resetPassword(PasswordResetConfirmRequest request) {
-        EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(
-                request.getEmail(), request.getCode())
-                .orElseThrow(() -> new RuntimeException("Invalid reset code"));
+        try {
+            EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(
+                    request.getEmail(), request.getCode())
+                    .orElseThrow(() -> new UserException("Invalid reset code", HttpStatus.BAD_REQUEST));
 
-        if (token.isExpired()) {
-            throw new RuntimeException("Reset code has expired");
+            if (token.isExpired()) {
+                throw new UserException("Reset code has expired", HttpStatus.BAD_REQUEST);
+            }
+
+            User user = token.getUser();
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            token.setUsed(true);
+
+            tokenRepository.save(token);
+            userRepository.save(user);
+            
+            log.info("Password reset successful for user: {}", request.getEmail());
+            return "Password reset successful";
+        } catch (UserException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to reset password for {}: {}", request.getEmail(), e.getMessage());
+            throw new UserException("Failed to reset password", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-        User user = token.getUser();
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        token.setUsed(true);
-
-        tokenRepository.save(token);
-        userRepository.save(user);
-
-        return "Password reset successful";
     }
 } 
