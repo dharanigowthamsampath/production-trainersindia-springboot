@@ -4,6 +4,8 @@ import com.trainersindia.portal.dto.LoginRequest;
 import com.trainersindia.portal.dto.LoginResponse;
 import com.trainersindia.portal.dto.RegisterRequest;
 import com.trainersindia.portal.dto.VerificationRequest;
+import com.trainersindia.portal.dto.PasswordResetRequest;
+import com.trainersindia.portal.dto.PasswordResetConfirmRequest;
 import com.trainersindia.portal.entity.EmailVerificationToken;
 import com.trainersindia.portal.entity.User;
 import com.trainersindia.portal.repository.EmailVerificationTokenRepository;
@@ -111,5 +113,54 @@ public class AuthService {
                 .fullName(userPrincipal.getFullName())
                 .role(userPrincipal.getAuthorities().iterator().next().getAuthority())
                 .build();
+    }
+
+    public String initiatePasswordReset(PasswordResetRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found with this email"));
+
+        String resetCode = generateVerificationCode();
+        
+        // Find existing token or create new one
+        EmailVerificationToken token = tokenRepository.findByUser(user)
+                .map(existingToken -> {
+                    existingToken.setCode(resetCode);
+                    existingToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+                    existingToken.setUsed(false);
+                    return existingToken;
+                })
+                .orElseGet(() -> {
+                    EmailVerificationToken newToken = new EmailVerificationToken();
+                    newToken.setEmail(request.getEmail());
+                    newToken.setCode(resetCode);
+                    newToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+                    newToken.setUser(user);
+                    return newToken;
+                });
+        
+        tokenRepository.save(token);
+        emailService.sendPasswordResetEmail(request.getEmail(), resetCode);
+
+        return "Password reset code sent to " + request.getEmail();
+    }
+
+    @Transactional
+    public String resetPassword(PasswordResetConfirmRequest request) {
+        EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(
+                request.getEmail(), request.getCode())
+                .orElseThrow(() -> new RuntimeException("Invalid reset code"));
+
+        if (token.isExpired()) {
+            throw new RuntimeException("Reset code has expired");
+        }
+
+        User user = token.getUser();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        token.setUsed(true);
+
+        tokenRepository.save(token);
+        userRepository.save(user);
+
+        return "Password reset successful";
     }
 } 

@@ -2,6 +2,8 @@ package com.trainersindia.portal.controller;
 
 import com.trainersindia.portal.dto.LoginRequest;
 import com.trainersindia.portal.dto.LoginResponse;
+import com.trainersindia.portal.dto.PasswordResetRequest;
+import com.trainersindia.portal.dto.PasswordResetConfirmRequest;
 import com.trainersindia.portal.dto.RegisterRequest;
 import com.trainersindia.portal.dto.VerificationRequest;
 import com.trainersindia.portal.service.AuthService;
@@ -49,6 +51,26 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid username or password"));
+        }
+    }
+
+    @PostMapping("/password/reset/initiate")
+    public ResponseEntity<?> initiatePasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        try {
+            String response = authService.initiatePasswordReset(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/password/reset/confirm")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        try {
+            String response = authService.resetPassword(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 } 

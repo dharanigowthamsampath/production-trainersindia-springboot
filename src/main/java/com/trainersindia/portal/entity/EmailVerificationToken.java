@@ -20,7 +20,8 @@ public class EmailVerificationToken {
     private LocalDateTime expiryDate;
     private boolean used;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
     public boolean isExpired() {

@@ -96,4 +96,44 @@ public class EmailServiceImpl implements EmailService {
             throw new RuntimeException("Failed to send email with attachment", e);
         }
     }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String code) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom("noreply@trainersindia.com", "Trainers India");
+            helper.setTo(toEmail);
+            helper.setSubject("Password Reset - Trainers India");
+            
+            String htmlContent = String.format("""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 5px;">
+                        <h1 style="color: #0d6efd;">Trainers India</h1>
+                        <h3 style="color: #333;">Password Reset</h3>
+                    </div>
+                    <div style="padding: 20px; background-color: white; border-radius: 5px; margin-top: 20px;">
+                        <p style="font-size: 16px; color: #333;">Hello,</p>
+                        <p style="font-size: 16px; color: #333;">We received a request to reset your password. Use the code below to set a new password:</p>
+                        <div style="background-color: #e9ecef; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
+                            <h2 style="color: #0d6efd; letter-spacing: 5px; margin: 0;">%s</h2>
+                        </div>
+                        <p style="font-size: 14px; color: #666;">This code will expire in 15 minutes.</p>
+                        <p style="font-size: 14px; color: #666;">If you didn't request this reset, please ignore this email.</p>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+                        <p>© 2024 Trainers India. All rights reserved.</p>
+                    </div>
+                </div>
+                """, code);
+            
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("Password reset email sent successfully to: {}", toEmail);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            log.error("Failed to send password reset email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
 } 
