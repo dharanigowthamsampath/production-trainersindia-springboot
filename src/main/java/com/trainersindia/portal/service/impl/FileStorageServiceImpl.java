@@ -1,7 +1,9 @@
 package com.trainersindia.portal.service.impl;
 
 import com.trainersindia.portal.config.FileStorageConfig;
+import com.trainersindia.portal.entity.FileInfo;
 import com.trainersindia.portal.exception.FileStorageException;
+import com.trainersindia.portal.repository.FileInfoRepository;
 import com.trainersindia.portal.service.FileStorageService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.util.stream.Stream;
 public class FileStorageServiceImpl implements FileStorageService {
 
     private final FileStorageConfig fileStorageConfig;
+    private final FileInfoRepository fileInfoRepository;
     private Path fileStorageLocation;
 
     @PostConstruct
@@ -50,6 +53,15 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            // Save file information to database
+            FileInfo fileInfo = new FileInfo();
+            fileInfo.setFileName(fileName);
+            fileInfo.setOriginalFileName(originalFileName);
+            fileInfo.setFileUrl(getFileUrl(fileName));
+            fileInfo.setFileType(file.getContentType());
+            fileInfo.setFileSize(file.getSize());
+            fileInfoRepository.save(fileInfo);
 
             return fileName;
         } catch (IOException ex) {
