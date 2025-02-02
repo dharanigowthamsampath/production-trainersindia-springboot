@@ -1,0 +1,83 @@
+auth:
+  registration:
+    description: User registration with email verification
+    endpoints:
+      - path: /api/v1/auth/register/initiate
+        method: POST
+        features:
+          - Username uniqueness check
+          - Email uniqueness check
+          - Password encryption
+          - 6-digit verification code generation
+          - Email verification code sending
+          - Role assignment (ADMIN, COMPANY, TRAINER)
+      
+      - path: /api/v1/auth/register/verify
+        method: POST
+        features:
+          - Verification code validation
+          - Account activation
+          - 15-minute code expiration
+
+  login:
+    description: User authentication with JWT
+    endpoints:
+      - path: /api/v1/auth/login
+        method: POST
+        features:
+          - Username/password authentication
+          - JWT token generation
+          - Role-based authorization
+          - User details in response
+
+  password_reset:
+    description: Password reset functionality
+    endpoints:
+      - path: /api/v1/auth/password/reset/initiate
+        method: POST
+        features:
+          - Email existence validation
+          - 6-digit reset code generation
+          - Reset code email sending
+          - Token reuse prevention
+      
+      - path: /api/v1/auth/password/reset/confirm
+        method: POST
+        features:
+          - Reset code validation
+          - New password validation
+          - Password update
+          - 15-minute code expiration
+
+security:
+  features:
+    - JWT based authentication
+    - Role based authorization
+    - Password encryption with BCrypt
+    - Protected endpoints for each role
+    - Session management (stateless)
+
+error_handling:
+  features:
+    - Global exception handling
+    - Custom user exceptions
+    - Validation error handling
+    - Detailed error responses
+    - Error logging
+
+email_service:
+  features:
+    - HTML email templates
+    - Verification email sending
+    - Password reset email sending
+    - Email configuration with environment variables
+    - Error handling for email failures
+
+role_based_access:
+  endpoints:
+    - path: /api/v1/admin/**
+      access: ROLE_ADMIN
+    - path: /api/v1/company/**
+      access: ROLE_COMPANY
+    - path: /api/v1/trainer/**
+      access: ROLE_TRAINER

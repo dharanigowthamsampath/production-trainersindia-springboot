@@ -1,0 +1,210 @@
+openapi: 3.0.0
+info:
+  title: Trainers India API
+  version: 1.0.0
+  description: API documentation for Trainers India portal
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+paths:
+  /auth/register/initiate:
+    post:
+      summary: Initiate user registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "johndoe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "password123"
+                fullName:
+                  type: string
+                  example: "John Doe"
+                role:
+                  type: string
+                  enum: [ROLE_ADMIN, ROLE_COMPANY, ROLE_TRAINER]
+                  example: "ROLE_TRAINER"
+      responses:
+        '200':
+          description: Registration initiated successfully
+          content:
+            application/json:
+              example: "Verification code sent to john@example.com"
+
+  /auth/register/verify:
+    post:
+      summary: Verify email and complete registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+
+  /auth/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              example:
+                token: "eyJhbGciOiJIUzI1..."
+                type: "Bearer"
+                username: "johndoe"
+                email: "john@example.com"
+                fullName: "John Doe"
+                role: "ROLE_TRAINER"
+
+  /auth/password/reset/initiate:
+    post:
+      summary: Initiate password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+
+  /auth/password/reset/confirm:
+    post:
+      summary: Complete password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                newPassword:
+                  type: string
+                  minLength: 6
+
+  /files/upload:
+    post:
+      summary: Upload single file
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded successfully
+          content:
+            application/json:
+              example:
+                fileName: "example.pdf"
+                fileUrl: "http://localhost:8080/api/v1/files/example.pdf"
+                fileType: "application/pdf"
+                size: 1048576
+
+  /files/upload/multiple:
+    post:
+      summary: Upload multiple files
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+
+  /files/{filename}:
+    get:
+      summary: Download file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+    delete:
+      summary: Delete file
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+        message:
+          type: string
