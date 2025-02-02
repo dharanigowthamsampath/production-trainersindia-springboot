@@ -19,6 +19,7 @@ public class UserPrincipal implements UserDetails {
     private String username;
     private String email;
     private String password;
+    private String fullName;
     private Collection<? extends GrantedAuthority> authorities;
 
     public static UserPrincipal create(User user) {
@@ -27,8 +28,9 @@ public class UserPrincipal implements UserDetails {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .password(user.getPassword())
+                .fullName(user.getFullName())
                 .authorities(user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList()))
                 .build();
     }

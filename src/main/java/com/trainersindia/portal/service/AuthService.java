@@ -1,5 +1,7 @@
 package com.trainersindia.portal.service;
 
+import com.trainersindia.portal.dto.LoginRequest;
+import com.trainersindia.portal.dto.LoginResponse;
 import com.trainersindia.portal.dto.RegisterRequest;
 import com.trainersindia.portal.dto.VerificationRequest;
 import com.trainersindia.portal.entity.EmailVerificationToken;
@@ -7,9 +9,15 @@ import com.trainersindia.portal.entity.User;
 import com.trainersindia.portal.repository.EmailVerificationTokenRepository;
 import com.trainersindia.portal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.trainersindia.portal.security.JwtTokenProvider;
+import com.trainersindia.portal.security.UserPrincipal;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -23,6 +31,8 @@ public class AuthService {
     private final EmailVerificationTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider tokenProvider;
 
     public String initiateRegistration(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -81,5 +91,25 @@ public class AuthService {
         Random random = new Random();
         int code = 100000 + random.nextInt(900000); // 6-digit code
         return String.valueOf(code);
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = tokenProvider.generateToken(authentication);
+        
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        
+        return LoginResponse.builder()
+                .token(jwt)
+                .type("Bearer")
+                .username(userPrincipal.getUsername())
+                .email(userPrincipal.getEmail())
+                .fullName(userPrincipal.getFullName())
+                .role(userPrincipal.getAuthorities().iterator().next().getAuthority())
+                .build();
     }
 } 
