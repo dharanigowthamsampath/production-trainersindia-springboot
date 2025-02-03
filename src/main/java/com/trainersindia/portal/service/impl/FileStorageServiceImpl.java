@@ -41,7 +41,7 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public String storeFile(MultipartFile file) {
+    public String storeFile(MultipartFile file, String directory) {
         String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
         String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
         String fileName = UUID.randomUUID().toString() + fileExtension;
@@ -51,19 +51,21 @@ public class FileStorageServiceImpl implements FileStorageService {
                 throw new FileStorageException("Filename contains invalid path sequence " + fileName);
             }
 
-            Path targetLocation = this.fileStorageLocation.resolve(fileName);
+            Path directoryPath = this.fileStorageLocation.resolve(directory);
+            Files.createDirectories(directoryPath);
+            Path targetLocation = directoryPath.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             // Save file information to database
             FileInfo fileInfo = new FileInfo();
             fileInfo.setFileName(fileName);
             fileInfo.setOriginalFileName(originalFileName);
-            fileInfo.setFileUrl(getFileUrl(fileName));
+            fileInfo.setFileUrl(getFileUrl(directory + "/" + fileName));
             fileInfo.setFileType(file.getContentType());
             fileInfo.setFileSize(file.getSize());
             fileInfoRepository.save(fileInfo);
 
-            return fileName;
+            return directory + "/" + fileName;
         } catch (IOException ex) {
             throw new FileStorageException("Could not store file " + fileName, ex);
         }

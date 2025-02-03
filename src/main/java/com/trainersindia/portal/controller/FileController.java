@@ -26,6 +26,7 @@ import java.util.Map;
 public class FileController {
 
     private final FileStorageService fileStorageService;
+    private static final String DEFAULT_UPLOAD_DIR = "uploads";
 
     /**
      * Upload a single file
@@ -50,7 +51,7 @@ public class FileController {
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
         log.info("Received file upload request for file: {}", file.getOriginalFilename());
         
-        String fileName = fileStorageService.storeFile(file);
+        String fileName = fileStorageService.storeFile(file, DEFAULT_UPLOAD_DIR);
         String fileUrl = fileStorageService.getFileUrl(fileName);
 
         Map<String, String> response = new HashMap<>();
