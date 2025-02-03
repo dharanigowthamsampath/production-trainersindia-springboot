@@ -11,7 +11,6 @@ public class JobApplicationResponse {
     private Long id;
     private Long postId;
     private String postTitle;
-    private String companyName;
     private String trainerName;
     private String coverLetter;
     private ApplicationStatus status;
@@ -23,7 +22,6 @@ public class JobApplicationResponse {
         response.setId(application.getId());
         response.setPostId(application.getPost().getId());
         response.setPostTitle(application.getPost().getTitle());
-        response.setCompanyName(application.getPost().getCompanyName());
         response.setTrainerName(application.getTrainer().getFullName());
         response.setCoverLetter(application.getCoverLetter());
         response.setStatus(application.getStatus());

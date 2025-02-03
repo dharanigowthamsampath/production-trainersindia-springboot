@@ -72,9 +72,6 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     @Override
     @Transactional
     public JobApplicationResponse updateStatus(Long applicationId, ApplicationStatus status, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
-
         JobApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new UserException("Application not found", HttpStatus.NOT_FOUND));
 
@@ -127,8 +124,6 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     }
 
     private JobApplication getApplicationForTrainer(Long applicationId, String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
         JobApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new UserException("Application not found", HttpStatus.NOT_FOUND));
