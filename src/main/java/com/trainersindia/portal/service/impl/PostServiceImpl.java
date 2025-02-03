@@ -12,7 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -75,6 +77,45 @@ public class PostServiceImpl implements PostService {
     @Override
     public List<Post> getPostsByCompany(String postedBy) {
         return postRepository.findByPostedBy(postedBy);
+    }
+
+    @Override
+    public List<Post> searchJobs(String location, String jobType, String experienceLevel, List<String> skills) {
+        List<Post> posts = postRepository.findAll();
+        
+        return posts.stream()
+            .filter(post -> location == null || post.getLocation().equalsIgnoreCase(location))
+            .filter(post -> jobType == null || post.getJobType().equalsIgnoreCase(jobType))
+            .filter(post -> experienceLevel == null || post.getExperienceLevel().equalsIgnoreCase(experienceLevel))
+            .filter(post -> skills == null || skills.isEmpty() || post.getSkillsRequired().containsAll(skills))
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Post> getRecentJobs() {
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        return postRepository.findAll().stream()
+            .filter(post -> post.getCreatedAt().isAfter(thirtyDaysAgo))
+            .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()))
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Post> searchJobsByKeyword(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllPosts();
+        }
+
+        String lowercaseKeyword = keyword.toLowerCase();
+        return postRepository.findAll().stream()
+            .filter(post -> 
+                post.getTitle().toLowerCase().contains(lowercaseKeyword) ||
+                post.getDescription().toLowerCase().contains(lowercaseKeyword) ||
+                post.getCompanyName().toLowerCase().contains(lowercaseKeyword) ||
+                post.getSkillsRequired().stream()
+                    .anyMatch(skill -> skill.toLowerCase().contains(lowercaseKeyword))
+            )
+            .collect(Collectors.toList());
     }
 
     private void mapPostRequestToPost(PostRequest postRequest, Post post) {
