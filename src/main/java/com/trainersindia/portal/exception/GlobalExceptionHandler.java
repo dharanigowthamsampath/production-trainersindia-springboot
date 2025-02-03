@@ -6,15 +6,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -37,14 +37,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserException.class)
-    public ResponseEntity<?> handleUserException(UserException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", ex.getStatus());
+    public ResponseEntity<Map<String, String>> handleUserException(UserException ex) {
+        Map<String, String> response = new HashMap<>();
         response.put("message", ex.getMessage());
-        
-        log.error("User error: {}", ex.getMessage());
-        return ResponseEntity.status(ex.getStatus()).body(response);
+        response.put("status", "error");
+        return new ResponseEntity<>(response, ex.getStatus());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -59,13 +56,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGlobalException(Exception ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", "INTERNAL_SERVER_ERROR");
+    public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
+        Map<String, String> response = new HashMap<>();
         response.put("message", "An unexpected error occurred");
-        
-        log.error("Unexpected error: ", ex);
+        response.put("status", "error");
+        response.put("details", ex.getMessage());
         return ResponseEntity.internalServerError().body(response);
     }
 } 

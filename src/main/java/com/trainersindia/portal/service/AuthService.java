@@ -40,6 +40,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
 
+    @Transactional
     public String initiateRegistration(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserException("Username is already taken", HttpStatus.CONFLICT);
@@ -58,6 +59,9 @@ public class AuthService {
             user.setFullName(request.getFullName());
             user.setRoles(Collections.singleton(request.getRole().name()));
             user.setActive(false); // User is inactive until email is verified
+            
+            // Save the user first
+            user = userRepository.save(user);
 
             // Generate verification code
             String verificationCode = generateVerificationCode();
