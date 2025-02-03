@@ -1,6 +1,5 @@
 package com.trainersindia.portal.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
@@ -10,14 +9,7 @@ import java.util.List;
 
 @Data
 public class TrainerProfileRequest {
-    @NotBlank(message = "Full name is required")
-    private String fullName;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
-    private String email;
-
-    @Pattern(regexp = "^\\+?[1-9][0-9]{7,14}$", message = "Invalid phone number")
+    @Pattern(regexp = "^(\\+91[\\-\\s]?)?[0]?(91)?[6789]\\d{9}$", message = "Invalid phone number format. Use Indian format like: +91-9876543210 or 9876543210")
     private String phoneNumber;
 
     @NotBlank(message = "Location is required")

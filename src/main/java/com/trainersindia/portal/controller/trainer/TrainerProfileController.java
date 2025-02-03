@@ -1,7 +1,7 @@
 package com.trainersindia.portal.controller.trainer;
 
 import com.trainersindia.portal.dto.TrainerProfileRequest;
-import com.trainersindia.portal.entity.TrainerProfile;
+import com.trainersindia.portal.dto.TrainerProfileResponse;
 import com.trainersindia.portal.security.UserPrincipal;
 import com.trainersindia.portal.service.TrainerProfileService;
 import jakarta.validation.Valid;
@@ -22,62 +22,62 @@ public class TrainerProfileController {
     private final TrainerProfileService profileService;
 
     @PostMapping
-    public ResponseEntity<TrainerProfile> createProfile(
+    public ResponseEntity<TrainerProfileResponse> createProfile(
             @Valid @RequestBody TrainerProfileRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.createProfile(request, userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.createProfile(request, userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @PutMapping
-    public ResponseEntity<TrainerProfile> updateProfile(
+    public ResponseEntity<TrainerProfileResponse> updateProfile(
             @Valid @RequestBody TrainerProfileRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.updateProfile(request, userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.updateProfile(request, userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @GetMapping
-    public ResponseEntity<TrainerProfile> getProfile(
+    public ResponseEntity<TrainerProfileResponse> getProfile(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.getProfile(userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.getProfile(userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @PostMapping(value = "/picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TrainerProfile> uploadProfilePicture(
+    public ResponseEntity<TrainerProfileResponse> uploadProfilePicture(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.uploadProfilePicture(file, userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.uploadProfilePicture(file, userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @PostMapping(value = "/resume", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TrainerProfile> uploadResume(
+    public ResponseEntity<TrainerProfileResponse> uploadResume(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.uploadResume(file, userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.uploadResume(file, userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @DeleteMapping("/picture")
-    public ResponseEntity<TrainerProfile> deleteProfilePicture(
+    public ResponseEntity<TrainerProfileResponse> deleteProfilePicture(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.deleteProfilePicture(userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.deleteProfilePicture(userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 
     @DeleteMapping("/resume")
-    public ResponseEntity<TrainerProfile> deleteResume(
+    public ResponseEntity<TrainerProfileResponse> deleteResume(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        TrainerProfile profile = profileService.deleteResume(userPrincipal.getUsername());
+        TrainerProfileResponse profile = profileService.deleteResume(userPrincipal.getUsername());
         return ResponseEntity.ok(profile);
     }
 } 

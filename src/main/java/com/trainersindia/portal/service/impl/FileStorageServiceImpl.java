@@ -8,6 +8,7 @@ import com.trainersindia.portal.service.FileStorageService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,7 +37,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         try {
             Files.createDirectories(this.fileStorageLocation);
         } catch (IOException ex) {
-            throw new FileStorageException("Could not create the directory where the uploaded files will be stored.", ex);
+            throw new FileStorageException("Could not create the directory where the uploaded files will be stored.", ex, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -48,12 +49,11 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         try {
             if (fileName.contains("..")) {
-                throw new FileStorageException("Filename contains invalid path sequence " + fileName);
+                throw new FileStorageException("Filename contains invalid path sequence " + fileName, HttpStatus.BAD_REQUEST);
             }
 
-            Path directoryPath = this.fileStorageLocation.resolve(directory);
-            Files.createDirectories(directoryPath);
-            Path targetLocation = directoryPath.resolve(fileName);
+            Path targetLocation = this.fileStorageLocation.resolve(directory).resolve(fileName);
+            Files.createDirectories(targetLocation.getParent());
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             // Save file information to database
@@ -67,7 +67,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             return directory + "/" + fileName;
         } catch (IOException ex) {
-            throw new FileStorageException("Could not store file " + fileName, ex);
+            throw new FileStorageException("Could not store file " + fileName, ex, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -82,7 +82,7 @@ public class FileStorageServiceImpl implements FileStorageService {
             Path file = load(filename);
             Files.deleteIfExists(file);
         } catch (IOException e) {
-            throw new FileStorageException("Error deleting file: " + filename, e);
+            throw new FileStorageException("Error deleting file: " + filename, e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -93,7 +93,7 @@ public class FileStorageServiceImpl implements FileStorageService {
                     .filter(path -> !path.equals(this.fileStorageLocation))
                     .map(this.fileStorageLocation::relativize);
         } catch (IOException e) {
-            throw new FileStorageException("Failed to read stored files", e);
+            throw new FileStorageException("Failed to read stored files", e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
