@@ -6,6 +6,7 @@ import com.trainersindia.portal.exception.FileStorageException;
 import com.trainersindia.portal.repository.FileInfoRepository;
 import com.trainersindia.portal.service.FileStorageService;
 import jakarta.annotation.PostConstruct;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -42,8 +42,17 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public String storeFile(MultipartFile file, String directory) {
-        String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+    public String storeFile(@NonNull MultipartFile file, @NonNull String directory) {
+        if (directory == null || directory.trim().isEmpty()) {
+            throw new FileStorageException("Directory cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+        
+        String originalFileName = file.getOriginalFilename();
+        if (originalFileName == null || originalFileName.trim().isEmpty()) {
+            throw new FileStorageException("Invalid file name", HttpStatus.BAD_REQUEST);
+        }
+        
+        originalFileName = StringUtils.cleanPath(originalFileName);
         String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
         String fileName = UUID.randomUUID().toString() + fileExtension;
 
