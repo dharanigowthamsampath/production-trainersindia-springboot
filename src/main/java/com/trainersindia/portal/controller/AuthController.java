@@ -6,6 +6,7 @@ import com.trainersindia.portal.service.AuthService;
 import com.trainersindia.portal.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
@@ -49,12 +51,16 @@ public class AuthController {
      * }
      */
     @PostMapping("/register/initiate")
-    public ResponseEntity<?> initiateRegistration(@Valid @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<ApiResponse> initiateRegistration(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
-            String response = authService.initiateRegistration(registerRequest);
-            return ResponseEntity.ok(response);
+            String message = authService.initiateRegistration(registerRequest);
+            return ResponseEntity.ok(ApiResponse.success(message));
+        } catch (UserException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
         }
     }
 
@@ -76,12 +82,16 @@ public class AuthController {
      * }
      */
     @PostMapping("/register/verify")
-    public ResponseEntity<?> verifyAndRegister(@Valid @RequestBody VerificationRequest verificationRequest) {
+    public ResponseEntity<ApiResponse> verifyAndRegister(@Valid @RequestBody VerificationRequest verificationRequest) {
         try {
             authService.verifyAndRegister(verificationRequest);
-            return ResponseEntity.ok("User registered successfully");
+            return ResponseEntity.ok(ApiResponse.success("User registered successfully"));
+        } catch (UserException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
         }
     }
 
@@ -90,26 +100,36 @@ public class AuthController {
      * 
      * @RequestBody:
      * {
-     *   "username": "string",
+     *   "email": "user@example.com",
      *   "password": "string"
      * }
      * 
      * @Response:
      * Success (200): {
-     *   "accessToken": "JWT_TOKEN"
+     *   "status": "SUCCESS",
+     *   "message": "Login successful",
+     *   "data": {
+     *     "accessToken": "JWT_TOKEN"
+     *   }
      * }
      * Error (401): {
-     *   "error": "Invalid username or password"
+     *   "status": "ERROR",
+     *   "message": "Invalid email or password",
+     *   "data": null
      * }
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<ApiResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             LoginResponse response = authService.login(loginRequest);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success("Login successful", response));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid username or password"));
+                    .body(ApiResponse.error("Invalid email or password"));
+        } catch (Exception e) {
+            log.error("Login error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("An error occurred during login. Please try again later."));
         }
     }
 

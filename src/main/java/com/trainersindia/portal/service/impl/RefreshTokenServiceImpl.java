@@ -30,15 +30,21 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        // Revoke any existing refresh tokens for the user
-        refreshTokenRepository.revokeAllUserTokens(user);
-
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
-        refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
-
-        return refreshTokenRepository.save(refreshToken);
+        // First try to find and update existing token
+        return refreshTokenRepository.findByUserAndRevokedFalse(user)
+                .map(token -> {
+                    token.setToken(UUID.randomUUID().toString());
+                    token.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
+                    token.setRevoked(false);
+                    return refreshTokenRepository.save(token);
+                })
+                .orElseGet(() -> {
+                    RefreshToken newToken = new RefreshToken();
+                    newToken.setUser(user);
+                    newToken.setToken(UUID.randomUUID().toString());
+                    newToken.setExpiryDate(Instant.now().plusMillis(refreshTokenExpiration));
+                    return refreshTokenRepository.save(newToken);
+                });
     }
 
     @Override
