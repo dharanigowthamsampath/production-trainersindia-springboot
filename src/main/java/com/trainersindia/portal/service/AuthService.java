@@ -6,6 +6,7 @@ import com.trainersindia.portal.dto.RegisterRequest;
 import com.trainersindia.portal.dto.VerificationRequest;
 import com.trainersindia.portal.dto.PasswordResetRequest;
 import com.trainersindia.portal.dto.PasswordResetConfirmRequest;
+import com.trainersindia.portal.dto.UserDetailsResponse;
 import com.trainersindia.portal.entity.EmailVerificationToken;
 import com.trainersindia.portal.entity.User;
 import com.trainersindia.portal.repository.EmailVerificationTokenRepository;
@@ -23,6 +24,9 @@ import com.trainersindia.portal.security.UserPrincipal;
 import com.trainersindia.portal.exception.UserException;
 import org.springframework.http.HttpStatus;
 import lombok.extern.slf4j.Slf4j;
+import com.trainersindia.portal.entity.RefreshToken;
+import com.trainersindia.portal.service.RefreshTokenService;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -39,6 +43,7 @@ public class AuthService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public String initiateRegistration(RegisterRequest request) {
@@ -117,15 +122,27 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
         
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        
         return LoginResponse.builder()
-                .token(jwt)
-                .type("Bearer")
-                .username(userPrincipal.getUsername())
-                .email(userPrincipal.getEmail())
-                .fullName(userPrincipal.getFullName())
-                .role(userPrincipal.getAuthorities().iterator().next().getAuthority())
+                .accessToken(jwt)
+                .build();
+    }
+
+    public UserDetailsResponse verifyTokenAndGetDetails(String token) {
+        if (!tokenProvider.validateToken(token)) {
+            throw new UserException("Invalid token", HttpStatus.UNAUTHORIZED);
+        }
+
+        String username = tokenProvider.getUsernameFromToken(token);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
+        
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return UserDetailsResponse.builder()
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .userType(user.getRoles().iterator().next())
+                .refreshToken(refreshToken.getToken())
                 .build();
     }
 

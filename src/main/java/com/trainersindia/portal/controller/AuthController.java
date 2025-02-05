@@ -1,17 +1,15 @@
 package com.trainersindia.portal.controller;
 
-import com.trainersindia.portal.dto.LoginRequest;
-import com.trainersindia.portal.dto.LoginResponse;
-import com.trainersindia.portal.dto.PasswordResetRequest;
-import com.trainersindia.portal.dto.PasswordResetConfirmRequest;
-import com.trainersindia.portal.dto.RegisterRequest;
-import com.trainersindia.portal.dto.VerificationRequest;
+import com.trainersindia.portal.dto.*;
+import com.trainersindia.portal.exception.UserException;
 import com.trainersindia.portal.service.AuthService;
+import com.trainersindia.portal.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -25,6 +23,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * Initiate user registration
@@ -87,7 +86,7 @@ public class AuthController {
     }
 
     /**
-     * User login
+     * User login - Step 1: Get access token
      * 
      * @RequestBody:
      * {
@@ -97,17 +96,10 @@ public class AuthController {
      * 
      * @Response:
      * Success (200): {
-     *   "token": "JWT_TOKEN",
-     *   "type": "Bearer",
-     *   "username": "string",
-     *   "email": "user@example.com",
-     *   "fullName": "string",
-     *   "role": "ROLE_ADMIN|ROLE_COMPANY|ROLE_TRAINER"
+     *   "accessToken": "JWT_TOKEN"
      * }
      * Error (401): {
-     *   "timestamp": "2024-02-02T12:00:00",
-     *   "status": "UNAUTHORIZED",
-     *   "message": "Invalid username or password"
+     *   "error": "Invalid username or password"
      * }
      */
     @PostMapping("/login")
@@ -118,6 +110,32 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid username or password"));
+        }
+    }
+
+    /**
+     * User login - Step 2: Verify token and get user details
+     * 
+     * @Response:
+     * Success (200): {
+     *   "username": "string",
+     *   "email": "user@example.com",
+     *   "userType": "ROLE_ADMIN|ROLE_COMPANY|ROLE_TRAINER",
+     *   "refreshToken": "string"
+     * }
+     * Error (401): {
+     *   "error": "Invalid token"
+     * }
+     */
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyAndGetDetails(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            UserDetailsResponse response = authService.verifyTokenAndGetDetails(token);
+            return ResponseEntity.ok(response);
+        } catch (UserException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -173,5 +191,17 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        TokenResponse tokenResponse = refreshTokenService.refreshAccessToken(request.getRefreshToken());
+        return ResponseEntity.ok(tokenResponse);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        refreshTokenService.revokeRefreshToken(request.getRefreshToken());
+        return ResponseEntity.ok().build();
     }
 } 

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+import com.trainersindia.portal.entity.User;
 
 import java.security.Key;
 import java.util.Date;
@@ -48,6 +49,21 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String generateToken(User user) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+
+        String roles = String.join(",", user.getRoles());
+
+        return Jwts.builder()
+                .setSubject(user.getUsername())
+                .claim("roles", roles)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
     public String getUsernameFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -74,5 +90,14 @@ public class JwtTokenProvider {
             log.error("JWT claims string is empty");
         }
         return false;
+    }
+
+    public Date getExpirationFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getExpiration();
     }
 } 
