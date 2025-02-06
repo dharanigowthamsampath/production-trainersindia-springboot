@@ -168,20 +168,29 @@ public class AuthController {
      * }
      * 
      * @Response:
-     * Success (200): "Password reset code sent to user@example.com"
+     * Success (200): {
+     *   "status": "SUCCESS",
+     *   "message": "Password reset code sent successfully",
+     *   "data": null
+     * }
      * Error (400): {
-     *   "timestamp": "2024-02-02T12:00:00",
-     *   "status": "BAD_REQUEST",
-     *   "message": "User not found with this email"
+     *   "status": "ERROR",
+     *   "message": "User not found with this email",
+     *   "data": null
      * }
      */
     @PostMapping("/password/reset/initiate")
-    public ResponseEntity<?> initiatePasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+    public ResponseEntity<ApiResponse> initiatePasswordReset(@Valid @RequestBody PasswordResetRequest request) {
         try {
-            String response = authService.initiatePasswordReset(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            authService.initiatePasswordReset(request);
+            return ResponseEntity.ok(ApiResponse.success("Password reset code sent successfully"));
+        } catch (UserException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Password reset initiation error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to process password reset request. Please try again later."));
         }
     }
 
@@ -196,20 +205,29 @@ public class AuthController {
      * }
      * 
      * @Response:
-     * Success (200): "Password reset successful"
+     * Success (200): {
+     *   "status": "SUCCESS",
+     *   "message": "Password reset successful",
+     *   "data": null
+     * }
      * Error (400): {
-     *   "timestamp": "2024-02-02T12:00:00",
-     *   "status": "BAD_REQUEST",
-     *   "message": "Invalid reset code"
+     *   "status": "ERROR",
+     *   "message": "Invalid reset code",
+     *   "data": null
      * }
      */
     @PostMapping("/password/reset/confirm")
-    public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+    public ResponseEntity<ApiResponse> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
         try {
-            String response = authService.resetPassword(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            authService.resetPassword(request);
+            return ResponseEntity.ok(ApiResponse.success("Password reset successful"));
+        } catch (UserException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Password reset error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to reset password. Please try again later."));
         }
     }
 

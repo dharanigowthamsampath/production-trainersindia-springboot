@@ -148,31 +148,37 @@ public class AuthService {
 
     public String initiatePasswordReset(PasswordResetRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with this email"));
+                .orElseThrow(() -> new UserException("User not found with this email", HttpStatus.NOT_FOUND));
 
-        String resetCode = generateVerificationCode();
-        
-        // Find existing token or create new one
-        EmailVerificationToken token = tokenRepository.findByUser(user)
-                .map(existingToken -> {
-                    existingToken.setCode(resetCode);
-                    existingToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
-                    existingToken.setUsed(false);
-                    return existingToken;
-                })
-                .orElseGet(() -> {
-                    EmailVerificationToken newToken = new EmailVerificationToken();
-                    newToken.setEmail(request.getEmail());
-                    newToken.setCode(resetCode);
-                    newToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
-                    newToken.setUser(user);
-                    return newToken;
-                });
-        
-        tokenRepository.save(token);
-        emailService.sendPasswordResetEmail(request.getEmail(), resetCode);
+        try {
+            String resetCode = generateVerificationCode();
+            
+            // Find existing token or create new one
+            EmailVerificationToken token = tokenRepository.findByUser(user)
+                    .map(existingToken -> {
+                        existingToken.setCode(resetCode);
+                        existingToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+                        existingToken.setUsed(false);
+                        return existingToken;
+                    })
+                    .orElseGet(() -> {
+                        EmailVerificationToken newToken = new EmailVerificationToken();
+                        newToken.setEmail(request.getEmail());
+                        newToken.setCode(resetCode);
+                        newToken.setExpiryDate(LocalDateTime.now().plusMinutes(15));
+                        newToken.setUser(user);
+                        return newToken;
+                    });
+            
+            tokenRepository.save(token);
+            emailService.sendPasswordResetEmail(request.getEmail(), resetCode);
 
-        return "Password reset code sent to " + request.getEmail();
+            log.info("Password reset code sent for user: {}", request.getEmail());
+            return "Password reset code sent successfully";
+        } catch (Exception e) {
+            log.error("Failed to process password reset for {}: {}", request.getEmail(), e.getMessage());
+            throw new UserException("Failed to process password reset request", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Transactional
