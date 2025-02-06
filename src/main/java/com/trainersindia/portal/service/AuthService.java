@@ -89,7 +89,7 @@ public class AuthService {
     }
 
     @Transactional
-    public User verifyAndRegister(VerificationRequest request) {
+    public void verifyAndRegister(VerificationRequest request) {
         EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(request.getEmail(), request.getCode())
                 .orElseThrow(() -> new UserException("Invalid verification code", HttpStatus.BAD_REQUEST));
 
@@ -103,7 +103,7 @@ public class AuthService {
 
         try {
             tokenRepository.save(token);
-            return userRepository.save(user);
+            userRepository.save(user);
         } catch (Exception e) {
             log.error("Failed to complete registration for user {}: {}", request.getEmail(), e.getMessage());
             throw new UserException("Failed to complete registration", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -148,7 +148,7 @@ public class AuthService {
                 .build();
     }
 
-    public String initiatePasswordReset(PasswordResetRequest request) {
+    public void initiatePasswordReset(PasswordResetRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserException("User not found with this email", HttpStatus.NOT_FOUND));
 
@@ -176,7 +176,6 @@ public class AuthService {
             emailService.sendPasswordResetEmail(request.getEmail(), resetCode);
 
             log.info("Password reset code sent for user: {}", request.getEmail());
-            return "Password reset code sent successfully";
         } catch (Exception e) {
             log.error("Failed to process password reset for {}: {}", request.getEmail(), e.getMessage());
             throw new UserException("Failed to process password reset request", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -184,7 +183,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String resetPassword(PasswordResetConfirmRequest request) {
+    public void resetPassword(PasswordResetConfirmRequest request) {
         try {
             EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(
                     request.getEmail(), request.getCode())
@@ -202,7 +201,6 @@ public class AuthService {
             userRepository.save(user);
             
             log.info("Password reset successful for user: {}", request.getEmail());
-            return "Password reset successful";
         } catch (UserException e) {
             throw e;
         } catch (Exception e) {
