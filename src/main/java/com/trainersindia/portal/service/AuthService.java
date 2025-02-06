@@ -20,13 +20,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.trainersindia.portal.security.JwtTokenProvider;
-import com.trainersindia.portal.security.UserPrincipal;
 import com.trainersindia.portal.exception.UserException;
 import org.springframework.http.HttpStatus;
 import lombok.extern.slf4j.Slf4j;
 import com.trainersindia.portal.entity.RefreshToken;
-import com.trainersindia.portal.service.RefreshTokenService;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -94,18 +91,23 @@ public class AuthService {
     @Transactional
     public User verifyAndRegister(VerificationRequest request) {
         EmailVerificationToken token = tokenRepository.findByEmailAndCodeAndUsedFalse(request.getEmail(), request.getCode())
-                .orElseThrow(() -> new RuntimeException("Invalid verification code"));
+                .orElseThrow(() -> new UserException("Invalid verification code", HttpStatus.BAD_REQUEST));
 
         if (token.isExpired()) {
-            throw new RuntimeException("Verification code has expired");
+            throw new UserException("Verification code has expired", HttpStatus.BAD_REQUEST);
         }
 
         User user = token.getUser();
         user.setActive(true);
         token.setUsed(true);
 
-        tokenRepository.save(token);
-        return userRepository.save(user);
+        try {
+            tokenRepository.save(token);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            log.error("Failed to complete registration for user {}: {}", request.getEmail(), e.getMessage());
+            throw new UserException("Failed to complete registration", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private String generateVerificationCode() {
